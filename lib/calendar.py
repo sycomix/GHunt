@@ -36,7 +36,7 @@ def fetch(email, client, config):
         client.cookies = cookies
     url_endpoint = f"https://calendar.google.com/calendar/u/0/embed?src={email}"
     print("\nGoogle Calendar : " + url_endpoint)
-    req = client.get(url_endpoint + "&hl=en")
+    req = client.get(f"{url_endpoint}&hl=en")
     source = req.text
     try:
         # parsing parameters from source code
@@ -81,9 +81,7 @@ def out(events):
         title = event["title"]
         duration = relativedelta(event["end"], event["start"])
         if duration.days or duration.hours or duration.minutes:
-            duration = (f"{(str(duration.days) + ' day' + ('s' if duration.days > 1 else '')) if duration.days else ''} "
-                f"{(str(duration.hours) + ' hour' + ('s' if duration.hours > 1 else '')) if duration.hours else ''} "
-                f"{(str(duration.minutes) + ' minute' + ('s' if duration.minutes > 1 else '')) if duration.minutes else ''}").strip()
+            duration = f"{f'{str(duration.days)} day' + ('s' if duration.days > 1 else '') if duration.days else ''} {f'{str(duration.hours)} hour' + ('s' if duration.hours > 1 else '') if duration.hours else ''} {f'{str(duration.minutes)} minute' + ('s' if duration.minutes > 1 else '') if duration.minutes else ''}".strip()
         else:
             duration = "?"
         date = event["start"].strftime("%Y/%m/%d %H:%M:%S")

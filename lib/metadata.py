@@ -43,19 +43,16 @@ class ExifEater():
                                 seconds = -seconds
 
                             geoaxis[axis] = round(degrees + minutes + seconds, 5)
-                        location = \
-                        self.geolocator.reverse("{}, {}".format(geoaxis["Latitude"], geoaxis["Longitude"])).raw[
-                            "address"]
+                        location = self.geolocator.reverse(
+                            f'{geoaxis["Latitude"]}, {geoaxis["Longitude"]}'
+                        ).raw["address"]
         except Exception:
             return ""
         else:
-            if location:
-                location = sanitize_location(location)
-                if not location:
-                    return ""
-                return f'{location["town"]}, {location["country"]}'
-            else:
+            if not location:
                 return ""
+            location = sanitize_location(location)
+            return "" if not location else f'{location["town"]}, {location["country"]}'
 
     def feed(self, img):
         try:

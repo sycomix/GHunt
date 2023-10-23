@@ -68,45 +68,43 @@ def email_hunt(email):
         # get name & profile picture
         account = get_account_data(client, gaiaID, internal_auth, internal_token, config)
         name = account["name"]
-        
+
         if name:
             print(f"Name : {name}")
-        else:
-            if "name" not in infos:
-                print("[-] Couldn't find name")
-            else:
-                for i in range(len(infos["name"])):
-                    if 'displayName' in infos['name'][i].keys():
-                        name = infos["name"][i]["displayName"]
-                        print(f"Name : {name}")
+        elif "name" in infos:
+            for i in range(len(infos["name"])):
+                if 'displayName' in infos['name'][i].keys():
+                    name = infos["name"][i]["displayName"]
+                    print(f"Name : {name}")
 
-        organizations = account["organizations"]
-        if organizations:
+        else:
+            print("[-] Couldn't find name")
+        if organizations := account["organizations"]:
             print(f"Organizations : {organizations}")
 
-        locations = account["locations"]
-        if locations:
+        if locations := account["locations"]:
             print(f"Locations : {locations}")
 
-        # profile picture
-        profile_pic_url = account.get("profile_pics") and account["profile_pics"][0].url
-        if profile_pic_url:
+        if (
+            profile_pic_url := account.get("profile_pics")
+            and account["profile_pics"][0].url
+        ):
             req = client.get(profile_pic_url)
 
             # TODO: make sure it's necessary now
             profile_pic_img = Image.open(BytesIO(req.content))
             profile_pic_flathash = image_hash(profile_pic_img)
-            is_default_profile_pic = detect_default_profile_pic(profile_pic_flathash)
+            if is_default_profile_pic := detect_default_profile_pic(
+                profile_pic_flathash
+            ):
+                print("\n[-] Default profile picture")
 
-            if not is_default_profile_pic:
+            else:
                 print("\n[+] Custom profile picture !")
                 print(f"=> {profile_pic_url}")
                 if config.write_profile_pic and not is_within_docker:
                     open(Path(config.profile_pics_dir) / f'{email}.jpg', 'wb').write(req.content)
                     print("Profile picture saved !")
-            else:
-                print("\n[-] Default profile picture")
-
         # cover profile picture
         cover_pic = account.get("cover_pics") and account["cover_pics"][0]
         if cover_pic and not cover_pic.is_default:
@@ -142,8 +140,7 @@ def email_hunt(email):
         if emails:
             print(f"Contact emails : {', '.join(map(str, emails.values()))}")
 
-        phones = account["phones"]
-        if phones:
+        if phones := account["phones"]:
             print(f"Contact phones : {phones}")
 
         # is bot?
@@ -164,7 +161,7 @@ def email_hunt(email):
             if name and (config.ytb_hunt_always or "youtube" in services):
                 ytb_hunt = True
             print("\n[+] Activated Google services :")
-            print('\n'.join(["- " + x.capitalize() for x in services]))
+            print('\n'.join([f"- {x.capitalize()}" for x in services]))
 
         except KeyError:
             ytb_hunt = True
@@ -179,47 +176,42 @@ def email_hunt(email):
                 print("\n[-] YouTube channel not found.")
             else:
                 confidence, channels = ytb.get_confidence(data, name, profile_pic_flathash)
-                
+
                 if confidence:
                     print(f"\n[+] YouTube channel (confidence => {confidence}%) :")
                     for channel in channels:
                         print(f"- [{channel['name']}] {channel['profile_url']}")
-                    possible_usernames = ytb.extract_usernames(channels)
-                    if possible_usernames:
+                    if possible_usernames := ytb.extract_usernames(channels):
                         print("\n[+] Possible usernames found :")
                         for username in possible_usernames:
                             print(f"- {username}")
                 else:
                     print("\n[-] YouTube channel not found.")
 
-        # TODO: return gpics function output here
-        #gpics(gaiaID, client, cookies, config.headers, config.regexs["albums"], config.regexs["photos"],
-        #      config.headless)
-
-        # reviews
-        reviews = gmaps.scrape(gaiaID, client, cookies, config, config.headers, config.regexs["review_loc_by_id"], config.headless)
-
-        if reviews:
+        if reviews := gmaps.scrape(
+            gaiaID,
+            client,
+            cookies,
+            config,
+            config.headers,
+            config.regexs["review_loc_by_id"],
+            config.headless,
+        ):
             confidence, locations = gmaps.get_confidence(geolocator, reviews, config.gmaps_radius)
             print(f"\n[+] Probable location (confidence => {confidence}) :")
 
-            loc_names = []
-            for loc in locations:
-                loc_names.append(
-                    f"- {loc['avg']['town']}, {loc['avg']['country']}"
-                )
-
+            loc_names = [
+                f"- {loc['avg']['town']}, {loc['avg']['country']}"
+                for loc in locations
+            ]
             loc_names = set(loc_names)  # delete duplicates
             for loc in loc_names:
                 print(loc)
-        
-        
-       # Google Calendar
-        calendar_response = gcalendar.fetch(email, client, config)
-        if calendar_response:
+
+
+        if calendar_response := gcalendar.fetch(email, client, config):
             print("[+] Public Google Calendar found !")
-            events = calendar_response["events"]
-            if events:
+            if events := calendar_response["events"]:
                 gcalendar.out(events)
             else:
                 print("=> No recent events found.")
